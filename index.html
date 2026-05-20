@@ -15,4 +15,16 @@
 </head>
 <body>
   <iframe 
-    src="https://script.google.com/macros/s/AKfycby0qdr2x4YbjL8YhrwmbWYzglDFVWpp5OpeL1Oj8eHGspuNxPzFSD
+    src="https://script.google.com/macros/s/AKfycbz8mqr6fLqqnZl2HZoihohNSkpTyfHOzAqh4KicQwt21Ofk0ku7XfJzxOvQNv8TsvtGAw/exec"
+    scrolling="yes">
+  </iframe>
+  <script>
+    window.addEventListener('message', function(e) {
+      const iframe = document.querySelector('iframe');
+      if (e.data && e.data.height) {
+        iframe.style.height = e.data.height + 'px';
+      }
+    });
+  </script>
+</body>
+</html>
