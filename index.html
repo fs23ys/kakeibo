@@ -2,31 +2,294 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="家計簿入力">
+  <title>家計簿入力</title>
   <style>
-    * { margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
-    iframe {
-      display: block;
-      width: 100%;
-      height: 100vh;
-      border: none;
-      overflow-y: scroll;
-      -webkit-overflow-scrolling: touch;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, Arial, sans-serif;
+      padding: 16px;
+      padding-bottom: 80px;
+      background: #f5f5f5;
+      color: #333;
+      max-width: 480px;
+      margin: 0 auto;
     }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    input[type="date"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+      background: #fafafa;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #4a90d9;
+      background: #fff;
+    }
+    textarea { height: 64px; resize: none; }
+    .amount-wrap { position: relative; }
+    .amount-wrap::before {
+      content: '¥';
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      color: #999;
+    }
+    .amount-wrap input { padding-left: 28px; }
+    .cat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .cat-btn {
+      padding: 10px 8px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      background: #fafafa;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .cat-btn:active { transform: scale(0.97); }
+    .cat-btn.selected {
+      border-color: #4a90d9;
+      background: #e8f2fc;
+      color: #1a5fa3;
+      font-weight: 600;
+    }
+    .sub-wrap { margin-top: 12px; display: none; }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+    .toggle-label { font-size: 14px; color: #d32f2f; font-weight: 600; }
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #ccc;
+      border-radius: 26px;
+      transition: 0.3s;
+      cursor: pointer;
+    }
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    .toggle input:checked + .slider { background: #d32f2f; }
+    .toggle input:checked + .slider::before { transform: translateX(22px); }
+    .save-btn {
+      width: 100%;
+      padding: 16px;
+      background: #4a90d9;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .save-btn:active { transform: scale(0.98); background: #357abd; }
+    .save-btn:disabled { background: #b0b0b0; transform: none; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #323232;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.3s;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
-  <iframe 
-    src="https://script.google.com/macros/s/AKfycbwNfoqlQGBSdmq910neEJr1pPS1xciZlpmI1EyZd1FlwHOjMo2TF-HjQsNtTpWxehgYEg/exec"
-    scrolling="yes">
-  </iframe>
-  <script>
-    window.addEventListener('message', function(e) {
-      const iframe = document.querySelector('iframe');
-      if (e.data && e.data.height) {
-        iframe.style.height = e.data.height + 'px';
-      }
+
+<div class="card">
+  <label>📅 日付</label>
+  <input type="date" id="date">
+</div>
+
+<div class="card">
+  <label>💰 金額</label>
+  <div class="amount-wrap">
+    <input type="number" id="amount" placeholder="0" inputmode="numeric">
+  </div>
+</div>
+
+<div class="card">
+  <label>📁 カテゴリ</label>
+  <div class="cat-grid" id="cat-grid"></div>
+  <div class="sub-wrap" id="sub-wrap">
+    <label style="margin-top:4px;">📝 詳細カテゴリ</label>
+    <select id="subCategory"></select>
+  </div>
+</div>
+
+<div class="card">
+  <label>💬 備考（店名・メモ）</label>
+  <textarea id="memo" placeholder="例：スタバ、旅行（北海道）など"></textarea>
+</div>
+
+<div class="card">
+  <div class="toggle-row">
+    <span class="toggle-label">🚨 無駄遣いとして記録</span>
+    <label class="toggle">
+      <input type="checkbox" id="isRed">
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
+
+<button class="save-btn" id="btn" onclick="send()">💾 シートに保存</button>
+<div style="height: 90px;"></div>
+<div class="toast" id="toast">✅ 保存しました！</div>
+
+<script>
+  // ⚠️ ここをあなたのGASのexec URLに書き換えてください
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNfoqlQGBSdmq910neEJr1pPS1xciZlpmI1EyZd1FlwHOjMo2TF-HjQsNtTpWxehgYEg/exec';
+
+  const catData = {
+    '🏠 実家・インフラ':  ['家庭食費', '通信費', '電気代', '水道代', '灯油代'],
+    '🍞 自由ごはん':      ['朝ごはん', '昼ごはん', '晩ごはん', 'お菓子', 'カフェ', '飲み物（ドリンク含）'],
+    '✂ 美容・健康・服':   ['ピラティス', 'ヘアサロン', '眉毛サロン', '脱毛', 'ヘアケア', 'コスメ・基礎化粧品', '衣類・小物', '洗剤・日用消耗品', 'クリーニング', '美容家電', '美容家電の保険', '生活雑貨'],
+    '⭐ 趣味・AI・おでかけ':  ['Claude・AIツール', '温泉', 'おでかけ', '旅行', 'サブスク', 'ライブ', 'スポーツ観戦', '映画', 'マッサージ', '書籍', 'その他趣味'],
+    '🚙 車・自転車・交通':  ['定期代', '駐輪場', '駐車場', '洗車・整備類', '保証', '電車・バス・路面電車・地下鉄(単発)'],
+    '🏥 医療・保険':      ['県民共済', '病院・歯科', '薬', 'その他', '自動車保険', '自転車保険'],
+    '👥 交際・ギフト':    ['家族との外食', '食料品', '友人との外食', '職場の人との外食', 'プレゼント・ギフト', 'おこづかい', '飲み会', 'その他'],
+    '📎 予備費・大型出費':    ['大型家電・ガジェット', '家具', '家電の保証', 'ふるさと納税', '冠婚葬祭', '突発出費（1万以上）', '雑費・不明', 'その他'],
+    '💎 資産形成':        ['投資'],
+  };
+
+  const catGrid = document.getElementById('cat-grid');
+  let selectedCat = '';
+
+  Object.keys(catData).forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn';
+    btn.textContent = cat;
+    btn.onclick = () => selectCat(cat, btn);
+    catGrid.appendChild(btn);
+  });
+
+  function selectCat(cat, btn) {
+    selectedCat = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const subWrap = document.getElementById('sub-wrap');
+    const subSel = document.getElementById('subCategory');
+    subSel.innerHTML = '';
+    catData[cat].forEach(s => {
+      const op = document.createElement('option');
+      op.value = s; op.text = s;
+      subSel.appendChild(op);
     });
-  </script>
+    subWrap.style.display = 'block';
+  }
+
+  document.getElementById('date').value = new Date().toISOString().substring(0, 10);
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function send() {
+    const btn = document.getElementById('btn');
+    const amount = document.getElementById('amount').value;
+    if (!amount || Number(amount) <= 0) { showToast('❌ 金額を入力してください'); return; }
+    if (!selectedCat) { showToast('❌ カテゴリを選択してください'); return; }
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+    const data = {
+      date: document.getElementById('date').value,
+      amount: amount,
+      mainCategory: selectedCat,
+      subCategory: document.getElementById('subCategory').value,
+      memo: document.getElementById('memo').value,
+      isRed: document.getElementById('isRed').checked
+    };
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // プリフライトを避けるためtext/plainで送る
+      body: JSON.stringify(data)
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.result === 'success') {
+          showToast('✅ 保存しました！');
+          document.getElementById('amount').value = '';
+          document.getElementById('memo').value = '';
+          document.getElementById('isRed').checked = false;
+          document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+          document.getElementById('sub-wrap').style.display = 'none';
+          selectedCat = '';
+        } else {
+          showToast('❌ エラー: ' + result.message);
+        }
+      })
+      .catch(err => {
+        showToast('❌ 通信エラー: ' + err.message);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.textContent = '💾 シートに保存';
+      });
+  }
+</script>
 </body>
 </html>
